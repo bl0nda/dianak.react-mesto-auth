@@ -54,3 +54,9 @@
 
 @import url(./blocks/popup/__field-error/_active/popup__field-error_active.css);
 @import url(./blocks/popup/__field-container/popup__field-container.css);
+
+@import url(./blocks/form-welcome/form-welcome.css);
+@import url(./blocks/form-welcome/__input-container/form-welcome__input-container.css);
+@import url(./blocks/form-welcome/__input/form-welcome__input.css);
+@import url(./blocks/form-welcome/__title/form-welcome__title.css);
+@import url(./blocks/form-welcome/__button/form-welcome__button.css);
