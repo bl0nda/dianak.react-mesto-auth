@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import {
-  BrowserRouter,
   Route,
   Routes,
   Navigate,
@@ -21,6 +20,7 @@ import ProtectedRouteElement from "./ProtectedRoute.js";
 import * as auth from "../utils/auth";
 import { Login } from "./Login.js";
 import { Register } from "./Register.js";
+import InfoTooltip from "./InfoTooltip.js";
 
 function App() {
   const [currentUser, setCurrentUser] = useState({
@@ -33,6 +33,8 @@ function App() {
   const [isEditProfilePopupOpen, setIsEditProfilePopupOpen] = useState(false);
   const [isAddPlacePopupOpen, setIsAddPlacePopupOpen] = useState(false);
   const [isEditAvatarPopupOpen, setIsEditAvatarPopupOpen] = useState(false);
+  const [isInfoTooltipPopupOpen, setIsInfoTooltipPopupOpen] = useState(false);
+  const [statusInfoTooltip, setStatusInfoTooltip] = useState(false);
 
   const [loggedIn, setLoggedIn] = useState(false);
   const [userData, setUserData] = useState("");
@@ -43,10 +45,7 @@ function App() {
       .authorize(email, password)
       .then((res) => {
         localStorage.setItem("token", res.token);
-        console.log(res);
-        setLoggedIn(true);
-        setUserData(email);
-        navigate("/cards");
+        tokenCheck();
       })
       .catch((err) => console.log(err));
   };
@@ -56,18 +55,26 @@ function App() {
       .register(email, password)
       .then((res) => {
         console.log(res);
+        setStatusInfoTooltip(true);
         navigate("/sign-in", { replace: true });
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        console.log(err);
+        setStatusInfoTooltip(false);
+      })
+      .finally(()=>{
+        setIsInfoTooltipPopupOpen(true)
+    });
   };
 
   const tokenCheck = () => {
     const token = localStorage.getItem("token");
 
-    auth.getContent(token).then((data) => {
-      if (data) {
+    auth.getContent(token).then((res) => {
+      if (res) {
+        const email = res.data.email;
         setLoggedIn(true);
-        setUserData(data.email);
+        setUserData(email);
         navigate("/cards");
       } else {
         setLoggedIn(false);
@@ -133,6 +140,7 @@ function App() {
     setIsAddPlacePopupOpen(false);
     setIsEditAvatarPopupOpen(false);
     setSelectedCard(null);
+    setIsInfoTooltipPopupOpen(false);
   }
 
   function handleCardClick(card) {
@@ -178,6 +186,7 @@ function App() {
 
   function signOut() {
     localStorage.removeItem("token");
+    setLoggedIn(false);
   }
 
   return (
@@ -239,6 +248,11 @@ function App() {
             onUpdateAvatar={handleUpdateAvatar}
           />
           <ImagePopup card={selectedCard} onClose={closeAllPopups} />
+          <InfoTooltip
+            isOpen={isInfoTooltipPopupOpen}
+            onClose={closeAllPopups}
+            status={statusInfoTooltip}
+          />
           <PopupWithForm
             title="Вы уверены?"
             name="confirm-delete"
