@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
-import { Route } from "react-router-dom";
+import {
+  BrowserRouter,
+  Route,
+  Routes,
+  Navigate,
+  useNavigate,
+} from "react-router-dom";
 import Header from "./Header.js";
 import Main from "./Main.js";
 import Footer from "./Footer.js";
@@ -11,6 +17,10 @@ import ImagePopup from "./ImagePopup.js";
 import api from "../utils/api.js";
 import avatar from "../images/avatar.jpg";
 import { CurrentUserContext } from "../contexts/CurrentUserContext.js";
+import ProtectedRouteElement from "./ProtectedRoute.js";
+import * as auth from "../utils/auth";
+import { Login } from "./Login.js";
+import { Register } from "./Register.js";
 
 function App() {
   const [currentUser, setCurrentUser] = useState({
@@ -23,6 +33,51 @@ function App() {
   const [isEditProfilePopupOpen, setIsEditProfilePopupOpen] = useState(false);
   const [isAddPlacePopupOpen, setIsAddPlacePopupOpen] = useState(false);
   const [isEditAvatarPopupOpen, setIsEditAvatarPopupOpen] = useState(false);
+
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [userData, setUserData] = useState("");
+  const navigate = useNavigate();
+
+  const handleLogin = (email, password) => {
+    auth
+      .authorize(email, password)
+      .then((res) => {
+        localStorage.setItem("token", res.token);
+        console.log(res);
+        setLoggedIn(true);
+        setUserData(email);
+        navigate("/cards");
+      })
+      .catch((err) => console.log(err));
+  };
+
+  const handleRegister = (email, password) => {
+    return auth
+      .register(email, password)
+      .then((res) => {
+        console.log(res);
+        navigate("/sign-in", { replace: true });
+      })
+      .catch((err) => console.log(err));
+  };
+
+  const tokenCheck = () => {
+    const token = localStorage.getItem("token");
+
+    auth.getContent(token).then((data) => {
+      if (data) {
+        setLoggedIn(true);
+        setUserData(data.email);
+        navigate("/cards");
+      } else {
+        setLoggedIn(false);
+      }
+    });
+  };
+
+  useEffect(() => {
+    tokenCheck();
+  }, []);
 
   const [selectedCard, setSelectedCard] = useState(null);
 
@@ -121,18 +176,29 @@ function App() {
       .catch((err) => console.log(err));
   }
 
+  function signOut() {
+    localStorage.removeItem("token");
+  }
+
   return (
     <div className="background">
       <div className="page">
         <CurrentUserContext.Provider value={currentUser}>
+          <Header userData={userData} signOut={signOut} />
           <Routes>
-            <Header />
-            <Route path="/sign-up" element={<Register />} />
-            <Route path="/sign-in" element={<Login />} />
             <Route
-              path="/"
+              path="/sign-up"
+              element={<Register handleRegister={handleRegister} />}
+            />
+            <Route
+              path="/sign-in"
+              element={<Login handleLogin={handleLogin} />}
+            />
+            <Route
+              path="/cards"
               element={
-                <Main
+                <ProtectedRouteElement
+                  element={Main}
                   onEditProfile={handleEditProfileClick}
                   onAddPlace={handleAddPlaceClick}
                   onEditAvatar={handleEditAvatarClick}
@@ -141,7 +207,18 @@ function App() {
                   onCardLike={handleCardLike}
                   onCardDelete={handleCardDelete}
                   cards={cards}
+                  loggedIn={loggedIn}
                 />
+              }
+            />
+            <Route
+              path="/"
+              element={
+                loggedIn ? (
+                  <Navigate to="/cards" replace />
+                ) : (
+                  <Navigate to="/sign-in" replace />
+                )
               }
             />
           </Routes>
