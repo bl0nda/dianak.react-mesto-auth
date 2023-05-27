@@ -1,10 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Route,
-  Routes,
-  Navigate,
-  useNavigate,
-} from "react-router-dom";
+import { Route, Routes, Navigate, useNavigate } from "react-router-dom";
 import Header from "./Header.js";
 import Main from "./Main.js";
 import Footer from "./Footer.js";
@@ -35,7 +30,7 @@ function App() {
   const [isEditAvatarPopupOpen, setIsEditAvatarPopupOpen] = useState(false);
   const [isInfoTooltipPopupOpen, setIsInfoTooltipPopupOpen] = useState(false);
   const [statusInfoTooltip, setStatusInfoTooltip] = useState(false);
-
+  const [selectedCard, setSelectedCard] = useState(null);
   const [loggedIn, setLoggedIn] = useState(false);
   const [userData, setUserData] = useState("");
   const navigate = useNavigate();
@@ -45,9 +40,15 @@ function App() {
       .authorize(email, password)
       .then((res) => {
         localStorage.setItem("token", res.token);
-        tokenCheck();
+        setLoggedIn(true);
+        setUserData(email);
+        navigate("/cards");
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        console.log(err);
+        setStatusInfoTooltip(false);
+        setIsInfoTooltipPopupOpen(true);
+      });
   };
 
   const handleRegister = (email, password) => {
@@ -62,33 +63,36 @@ function App() {
         console.log(err);
         setStatusInfoTooltip(false);
       })
-      .finally(()=>{
-        setIsInfoTooltipPopupOpen(true)
-    });
+      .finally(() => {
+        setIsInfoTooltipPopupOpen(true);
+      });
   };
 
   const tokenCheck = () => {
     const token = localStorage.getItem("token");
-
-    auth.getContent(token).then((res) => {
-      if (res) {
-        const email = res.data.email;
-        setLoggedIn(true);
-        setUserData(email);
-        navigate("/cards");
-      } else {
-        setLoggedIn(false);
-      }
-    });
+    if (token) {
+      auth
+        .getContent(token)
+        .then((res) => {
+          if (res) {
+            const email = res.data.email;
+            setLoggedIn(true);
+            setUserData(email);
+            navigate("/cards");
+          } else {
+            setLoggedIn(false);
+          }
+        })
+        .catch((err) => console.log(err));
+    }
   };
 
   useEffect(() => {
     tokenCheck();
   }, []);
 
-  const [selectedCard, setSelectedCard] = useState(null);
-
   useEffect(() => {
+    if (loggedIn) {
     api
       .getProfileData()
       .then((res) => {
@@ -101,7 +105,8 @@ function App() {
         setCards(res);
       })
       .catch((err) => console.log(err));
-  }, []);
+    }
+  }, [loggedIn]);
 
   function handleEditProfileClick() {
     setIsEditProfilePopupOpen(true);
@@ -187,6 +192,7 @@ function App() {
   function signOut() {
     localStorage.removeItem("token");
     setLoggedIn(false);
+    setUserData("");
   }
 
   return (
